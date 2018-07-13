@@ -17,10 +17,13 @@ const styles = theme => {
   return {
     root: {
     },
-    badge: {
-      marginRight: theme.spacing.unit * 2.5,
+    tabLabelBadge: {
+      marginRight: 24,
       backgroundColor: theme.palette.grey[100],
-      top: -6
+      top: -4
+    },
+    tabLabelText: {
+      fontWeight: 500,
     },
     upsellDemo: {
       cursor: 'default',
@@ -77,16 +80,16 @@ class AnnotationTabs extends Component {
             })}
           >
           <Tab label={
-            <Typography>
-              <Badge classes={{ badge: this.props.classes.badge }} badgeContent={ this.count(false) }>
+            <Typography className={ this.props.classes.tabLabelText }>
+              <Badge classes={{ badge: this.props.classes.tabLabelBadge }} badgeContent={ this.count(false) }>
                 &nbsp;
               </Badge>
               Unresolved
             </Typography>
           } />
           <Tab label={
-            <Typography>
-              <Badge classes={{ badge: this.props.classes.badge }} badgeContent={ this.count(true) }>
+            <Typography className={ this.props.classes.tabLabelText }>
+              <Badge classes={{ badge: this.props.classes.tabLabelBadge }} badgeContent={ this.count(true) }>
                 &nbsp;
               </Badge>
               Resolved

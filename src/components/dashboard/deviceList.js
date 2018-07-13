@@ -45,6 +45,9 @@ const styles = theme => {
     textField: {
       marginBottom: theme.spacing.unit
     },
+    deviceListItemName: {
+      fontWeight: 500,
+    },
   }
 };
 
@@ -161,7 +164,7 @@ class DeviceList extends Component {
                   />
                 </React.Fragment>
                 :
-                <Typography>{ (device.alias && device.alias + ' (' + device.dongle_id + ')') || device.dongle_id }</Typography>
+                <Typography className={ this.props.classes.deviceListItemName }>{ (device.alias && device.alias + ' (' + device.dongle_id + ')') || device.dongle_id }</Typography>
               }
             </Grid>
             { (!device.shared && (device.is_owner || this.props.isSuperUser)) &&
