@@ -27,6 +27,9 @@ const styles = theme => {
       pointerEvents: 'none',
       opacity: 0.8
     },
+    annotationsViewerTabIndicator: {
+      backgroundColor: '#fff',
+    },
   };
 };
 
@@ -65,6 +68,9 @@ class AnnotationTabs extends Component {
         <Tabs
           value={ this.state.selectedTab }
           onChange={ this.handleChange }
+          classes={{
+            indicator: this.props.classes.annotationsViewerTabIndicator
+          }}
           fullWidth
           className={ classNames({
             [this.props.classes.upsellDemo]: this.props.isUpsellDemo

@@ -38,7 +38,7 @@ const styles = theme => {
       height: '64px',
       borderRadius: '32px',
       padding: theme.spacing.unit,
-      maxWidth: 450,
+      maxWidth: 510,
       margin: '0 auto'
     },
     fullHeight: {

@@ -44,7 +44,7 @@ const styles = theme => {
     },
     textField: {
       marginBottom: theme.spacing.unit
-    }
+    },
   }
 };
 
@@ -165,7 +165,7 @@ class DeviceList extends Component {
               }
             </Grid>
             { (!device.shared && (device.is_owner || this.props.isSuperUser)) &&
-              <Grid item xs={2} alignContent='center'>
+              <Grid item xs={2}>
                 <Pencil className={ this.props.classes.editDeviceIcon } onClick={ partial(this.toggleDeviceEdit, device) } />
               </Grid>
             }

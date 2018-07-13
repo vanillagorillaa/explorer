@@ -63,6 +63,12 @@ const theme = createMuiTheme({
       main: Colors.grey900,
       dark: Colors.grey999
     },
+    states: {
+      drivingBlue: Colors.blue500,
+      engagedGreen: Colors.green400,
+      alertOrange: Colors.orange50,
+      alertRed: Colors.red100,
+    },
     grey: {
       50: Colors.grey50,
       100: Colors.grey100,
