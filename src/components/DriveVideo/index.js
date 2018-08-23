@@ -20,6 +20,12 @@ wheelImg.src = require('../../icons/icon-chffr-wheel.svg');
 const vwp_w = 1164;
 const vwp_h = 874;
 const bdr_s = 30;
+const sbr_w = 0;
+const box_x = sbr_w+bdr_s;
+const box_y = bdr_s;
+const box_w = vwp_w-sbr_w-(bdr_s*2);
+const box_h = vwp_h-(bdr_s*2);
+const viz_w = vwp_w-(bdr_s*2);
 
 const styles = theme => {
   return {
@@ -210,6 +216,7 @@ class VideoPreview extends Component {
     if (calibration) {
       if (this.lastCalibrationTime !== calibration.LogMonoTime) {
         this.extrinsic = [...calibration.LiveCalibration.ExtrinsicMatrix, 0, 0, 0, 1];
+        this.warpMatrix = calibration.LiveCalibration.WarpMatrix2;
       }
       this.lastCalibrationTime = calibration.LogMonoTime;
     }
@@ -378,6 +385,7 @@ class VideoPreview extends Component {
   drawLaneFull (options, events) { // ui_draw_vision_lanes
     var { ctx } = options;
     if (events) {
+      this.drawSmallBox(options);
       if (events.model) {
         this.drawLaneBoundary(ctx, events.model.Model.LeftLane);
         this.drawLaneBoundary(ctx, events.model.Model.RightLane);
@@ -390,6 +398,57 @@ class VideoPreview extends Component {
         });
       }
     }
+  }
+  drawSmallBox (options) {
+    const { ctx, height, width } = options;
+    var outMat = [
+      2/width, 0, 0, -1,
+      0, 2/height, 0, -1,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    ];
+
+    let transformedWidth = 320;
+    let transformedHeight = 160;
+
+    // console.log(this.matmul4(frameTransform(), [...outMat]));
+    // console.log(this.warpMatrix);
+
+    outMat = this.matmul4(deviceTransform(), this.matmul4(frameTransform(), outMat));
+    // console.log(outMat);
+
+    var bbt = this.warpMatrix;
+    var verts = [
+      this.matvecmul3(bbt, [0, 0, 1]),
+      this.matvecmul3(bbt, [transformedWidth, 0, 1]),
+      this.matvecmul3(bbt, [transformedWidth, transformedHeight, 1]),
+      this.matvecmul3(bbt, [0, transformedHeight, 1]),
+      this.matvecmul3(bbt, [0, 0, 1]),
+    ];
+
+    for (let i = 0; i < verts.length; ++i) {
+      verts[i][0] = verts[i][0] / verts[i][2];
+      verts[i][1] = verts[i][1] / verts[i][2];
+    }
+
+    ctx.save();
+
+    // ctx.setTransform(outMat[0], outMat[1], outMat[2], outMat[4], outMat[5], outMat[6], outMat[8], outMat[9], outMat[10]);
+    // ctx.transform(outMat[0], outMat[1], outMat[2], outMat[4], outMat[5], outMat[6], outMat[8], outMat[9], outMat[10]);
+    // ctx.scale(outMat[0], outMat[5]);
+
+    // console.log('');
+    // console.log('Square!');
+    ctx.beginPath();
+    verts.forEach((v, i) => {
+      if (i === 0) {
+        ctx.moveTo(v[0], v[1]);
+      } else {
+        ctx.lineTo(v[0], v[1]);
+      }
+    });
+    ctx.stroke();
+    ctx.restore();
   }
   drawLaneBoundary (ctx, lane) { // ui_draw_lane
     let color = 'rgba(255, 255, 255,' + lane.Prob + ')';
@@ -562,8 +621,8 @@ class VideoPreview extends Component {
     ctx.strokeRect(0, 0, vwp_w, vwp_h);
   }
   carSpaceToImageSpace (coords) {
-    this.matmul(this.extrinsic, coords);
-    this.matmul(this.intrinsic, coords);
+    this.matvecmul4(this.extrinsic, coords);
+    this.matvecmul4(this.intrinsic, coords);
 
     // project onto 3d with Z
     coords[0] /= coords[2];
@@ -571,7 +630,7 @@ class VideoPreview extends Component {
 
     return coords;
   }
-  matmul (matrix, coord) {
+  matvecmul4 (matrix, coord) {
     let b0 = coord[0], b1 = coord[1], b2 = coord[2], b3 = coord[3];
 
     coord[0] = b0 * matrix[0]  + b1 * matrix[1]  + b2 * matrix[2]  + b3 * matrix[3];
@@ -580,6 +639,67 @@ class VideoPreview extends Component {
     coord[3] = b0 * matrix[12] + b1 * matrix[13] + b2 * matrix[14] + b3 * matrix[15];
 
     return coord;
+  }
+  matvecmul3 (matrix, coord) {
+    let b0 = coord[0], b1 = coord[1], b2 = coord[2];
+
+    coord[0] = b0 * matrix[0]  + b1 * matrix[1]  + b2 * matrix[2];
+    coord[1] = b0 * matrix[3]  + b1 * matrix[4]  + b2 * matrix[5];
+    coord[2] = b0 * matrix[6]  + b1 * matrix[7]  + b2 * matrix[8];
+
+    return coord;
+  }
+  matmul3 (matrixa, matrixb) {
+    let b0 = matrixb[0], b1 = matrixb[1], b2 = matrixb[2];
+
+    matrixb[0] = b0 * matrixa[0]  + b1 * matrixa[1]  + b2 * matrixa[2];
+    matrixb[1] = b0 * matrixa[3]  + b1 * matrixa[4]  + b2 * matrixa[5];
+    matrixb[2] = b0 * matrixa[6]  + b1 * matrixa[7]  + b2 * matrixa[8];
+
+    b0 = matrixb[3], b1 = matrixb[4], b2 = matrixb[5];
+
+    matrixb[3] = b0 * matrixa[0]  + b1 * matrixa[1]  + b2 * matrixa[2];
+    matrixb[4] = b0 * matrixa[3]  + b1 * matrixa[4]  + b2 * matrixa[5];
+    matrixb[5] = b0 * matrixa[6]  + b1 * matrixa[7]  + b2 * matrixa[8];
+
+    b0 = matrixb[6], b1 = matrixb[7], b2 = matrixb[8];
+
+    matrixb[6] = b0 * matrixa[0]  + b1 * matrixa[1]  + b2 * matrixa[2];
+    matrixb[7] = b0 * matrixa[3]  + b1 * matrixa[4]  + b2 * matrixa[5];
+    matrixb[8] = b0 * matrixa[6]  + b1 * matrixa[7]  + b2 * matrixa[8];
+
+    return matrixb;
+  }
+  matmul4 (matrixa, matrixb) {
+    let b0 = matrixb[0], b1 = matrixb[1], b2 = matrixb[2], b3 = matrixb[3];
+
+    matrixb[0] = b0 * matrixa[0]  + b1 * matrixa[1]  + b2 * matrixa[2]  + b3 * matrixa[3];
+    matrixb[1] = b0 * matrixa[4]  + b1 * matrixa[5]  + b2 * matrixa[6]  + b3 * matrixa[7];
+    matrixb[2] = b0 * matrixa[8]  + b1 * matrixa[9]  + b2 * matrixa[10] + b3 * matrixa[11];
+    matrixb[3] = b0 * matrixa[12] + b1 * matrixa[13] + b2 * matrixa[14] + b3 * matrixa[15];
+
+    b0 = matrixb[4], b1 = matrixb[5], b2 = matrixb[6], b3 = matrixb[7];
+
+    matrixb[4] = b0 * matrixa[0]  + b1 * matrixa[1]  + b2 * matrixa[2]  + b3 * matrixa[3];
+    matrixb[5] = b0 * matrixa[4]  + b1 * matrixa[5]  + b2 * matrixa[6]  + b3 * matrixa[7];
+    matrixb[6] = b0 * matrixa[8]  + b1 * matrixa[9]  + b2 * matrixa[10] + b3 * matrixa[11];
+    matrixb[7] = b0 * matrixa[12] + b1 * matrixa[13] + b2 * matrixa[14] + b3 * matrixa[15];
+
+    b0 = matrixb[8], b1 = matrixb[9], b2 = matrixb[10], b3 = matrixb[11];
+
+    matrixb[8] = b0 * matrixa[0]  + b1 * matrixa[1]  + b2 * matrixa[2]  + b3 * matrixa[3];
+    matrixb[9] = b0 * matrixa[4]  + b1 * matrixa[5]  + b2 * matrixa[6]  + b3 * matrixa[7];
+    matrixb[10] = b0 * matrixa[8]  + b1 * matrixa[9]  + b2 * matrixa[10] + b3 * matrixa[11];
+    matrixb[11] = b0 * matrixa[12] + b1 * matrixa[13] + b2 * matrixa[14] + b3 * matrixa[15];
+
+    b0 = matrixb[12], b1 = matrixb[13], b2 = matrixb[14], b3 = matrixb[15];
+
+    matrixb[12] = b0 * matrixa[0]  + b1 * matrixa[1]  + b2 * matrixa[2]  + b3 * matrixa[3];
+    matrixb[13] = b0 * matrixa[4]  + b1 * matrixa[5]  + b2 * matrixa[6]  + b3 * matrixa[7];
+    matrixb[14] = b0 * matrixa[8]  + b1 * matrixa[9]  + b2 * matrixa[10] + b3 * matrixa[11];
+    matrixb[15] = b0 * matrixa[12] + b1 * matrixa[13] + b2 * matrixa[14] + b3 * matrixa[15];
+
+    return matrixb;
   }
   videoURL () {
     let segment = this.props.currentSegment || this.props.nextSegment;
@@ -663,6 +783,25 @@ function intrinsicMatrix () {
     0,          950.892854, 439,  0,
     0,            0,        1,    0,
     0,            0,        0,    0,
+  ];
+}
+
+function deviceTransform () {
+  return [
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  ];
+}
+
+function frameTransform () {
+  let x = 2 * (4 / 3) / (viz_w / box_h);
+  return [
+    x,   0.0, 0.0, 0.0,
+    0.0, 2.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0,
   ];
 }
 
